@@ -1,0 +1,58 @@
+SPR files:
+Field	Size (bytes)
+FType	4
+Width	4
+Height	4
+Unknown	4 (seems to be pixel count when FType=2 except for mainload_Delete and possibly others; tile count when FType=5; a value slightly bigger than the last one in the list when FType=0)
+
+
+Hatch background SPR file:
+There are 416 occurrences of a pattern (4 bytes each) at the top.
+Then it looks like a ton of static (as 4 BPP)
+It looks like those 416 occurrences are some kind of data table that ends with 01 00 10 00. (I've seen that in multiple files, but I found it in this one roughly where I expected the repeating pattern to end)
+The pattern is definitely not straight-up RGB (the SPR file should be associated with a palette file), but it seems pretty clear that it's a 4-byte pattern.
+The values start low (0, 164, 2C8, 42C, 590, 6F4, 858, ...) and rise until they reach 00023594 (note that the whole file is 018BCB bytes long), then that 01 00 10 00 shows up. (In mainload_bkgnd.SPR, that pattern is immediately after the pixel count, at 0x10, but it doesn't occur in mainload_Delete_*.SPR...they do have 01 23 05 00, 01 00 06 00, and 01 3C 05 00 respectively, though.)
+Anyway, that leaves 99639 bytes of image data. The image is 350x416, and there are 416 entries in that table...huh.
+So... Each of those entries points to the start of a new row of image data? That seems pointless, but anyway, it's impossible since the file is way too small.
+I'm baffled because those really look like pointers, but they can't be. (I even double checked the packed archive manually; the file is just too short.)
+
+The first int in the file is 0 if it has one of those tables, or 2 if not. The fifth int is 0 if the first is 0; otherwise, it's 01 ** ** ** (often 01 00 10 00, but for sprites with variations especially, it's got other values). Variations: hatch_noeggs_bkgnd, mainload_Delete_0-2 (up, down, hover; up and hover are 01 ** 05 00, but down is 01 00 06 00), build_anest_0-3 (up, down, hover, inactive; 01E2 0300, 01FD 0300, 0100 0400, 013D 0300; and they have identical 36-entry tables ranging from 0 to 0x510)...build_tent_* has 58 table entries...
+
+Check out tiles11.spr. It's got 5 (a different type than the others), 32x32, 1AE (followed by 1AE 32-bit 0s), 00 B8 06 00 (440,320--uncompressed data size? It's 32*32*430, and 430 matches level11-set.ldf), and the fabled 01 00 10 00.
+Tiless.spr is similar. 5, 32x32, 2116 (tile count), 2116 four-byte 0s, 32*32*2116 (uncompressed data size), 01 00 10 00.
+
+--
+
+Palette files are http://worms2d.info/Palette_file
+
+
+
+Field	Size	Vals	Details
+FType	4	0,2,3,5	
+Width	4	~	Width of each contained image, in pixels
+Height	4	~	Height of each contained image, in pixels
+
+If FType = 0:
+UBound	4	~	Slightly bigger than last value in the following list
+RList	?*4	~	Exclusively rising values, usually by a constant multiple (sometimes not when there are multiple versions of the same file), starting with 0. Possibly uncompressed data output positions.
+Term	4	01*	May always be 01 xx xx xx. Often is 01 00 10 00 unless there are multiple versions of the file, and then it varies by version.
+
+If FType = 2:
+UnkCt	4	~	Sometimes, this is the pixel count (Width*Height)
+Term	4	01*	May always be 01 xx xx xx. Often is 01 00 10 00 unless there are multiple versions of the file.
+
+If FType = 3:
+ImgCt	4	~	Contained image count?
+RList	ImgCt*4	~	These have a pattern like pointers, but they're huge--like 6EC9F8F8.
+(The rest is same as FType = 0)
+UBound	4	~	Slightly bigger than last value in the following list
+RList	?*4	~	Exclusively rising values, usually by a constant multiple (sometimes not when there are multiple versions of the same file), starting with 0. Possibly uncompressed data output positions.
+Term	4	01*	May always be 01 xx xx xx. Often is 01 00 10 00 unless there are multiple versions of the file, and then it varies by version.
+
+If FType = 5:
+ImgCt	4	~	Contained image count
+Zeroes	ImgCt*4	0	Two exceptions: tiles1 and tiles3 have nonzero values here.
+USize	4	W*H*IC	Always matches the expected uncompressed data size.
+Term	4	01*	May always be 01 xx xx xx. Often is 01 00 10 00 unless there are multiple versions of the file.
+
+Since that "Term" appears similarly in each struct, it may actually be the beginning of the image data. The 01 00 10 00 instance might just be some transparent pixels or something. This doesn't seem very likely, though.

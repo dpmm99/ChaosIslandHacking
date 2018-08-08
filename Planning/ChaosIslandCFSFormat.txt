@@ -1,0 +1,42 @@
+The CFS archives contain all the videos, audio, and graphics, as well as some gameplay data such as maps and user interface layouts.
+I don't understand much of the format, but this is sufficient to unpack the archives.
+
+--
+
+Strings are null-terminated.
+All offsets are relative to the archive file.
+
+"FSH2" (4 bytes, FourCC)
+Root Node:
+	Block Length (int)
+	Number of Files (int)
+	Unknown 1 (int; value is 0)
+	Unknown 2 (int; value is 0)
+	Unknown 3 (int; value is 0)
+	Unknown 4 (int; value is 1)
+	Node Name (string)
+	Unknown 5 (int; value is 0 for disk1 and 61 6D 5C 6C for disk2)
+End Root Node
+
+File Nodes (equal in count to Number of Files):
+	Block Length (int)
+	Unknown Alpha (int; is always 2)
+	File Descriptor Offset (int)
+	ID (string)
+End File Nodes
+
+--
+
+File Descriptors (equal in count to Number of Files):
+	Block Length (int; length of the File Descriptor only)
+	File Data Start (int; offset to the first byte of the file)
+	File Data End (int; offset to the first byte of whatever comes after the file)
+	Unknown A (int; seems to always start with 00)
+	Unknown B (int; seems to always end with 01)
+	Unknown C (int; is always 0)
+	Unknown D (int; is always 2 like Unknown Alpha)
+	File Name (string)
+	Unknown E (int; usually zeroes, but sometimes has other data with no apparent pattern)
+End File Descriptors
+
+Each file descriptor is immediately followed by the data for the file it describes, but since Block Length and File Data Start are both listed in the File Descriptor, this is likely a tendency rather than a requirement.

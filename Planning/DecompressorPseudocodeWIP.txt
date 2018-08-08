@@ -1,0 +1,82 @@
+Function OutputDebugByte(String Descriptor, Byte AByte)
+	Append_Descriptor_to_end_of_debug_stream()
+	Append_AByte_to_end_of_debug_stream_as_hex_string()
+End Function
+
+Function OutputByte(Byte AByte)
+	Append_AByte_to_end_of_output_stream()
+	outputOffset = outputOffset + 1
+End Function
+
+Function OutputZeroes(Int ZeroesCount)
+	For X = 0 to ZeroesCount
+		OutputByte(0)
+	End For
+End Function
+
+Function Byte GetByte()
+	AByte = Read_byte_from_offset_in_input_stream()
+	offset = offset + 1
+	Return AByte
+End Function
+
+Function Int GetInt()
+	AnInt = GetByte()
+	AnInt = AnInt | (GetByte() << 8) //"Or" and bitshift in pseudocode FTW
+	AnInt = AnInt | (GetByte() << 16)
+	AnInt = AnInt | (GetByte() << 24)
+	Return AnInt
+End Function
+
+Function GetMagicalByte()
+	AByte = GetByte()
+	If AByte == 00 Then
+		NextMagicalByteOffset = offset + 8 //9th byte after this MagicalByte
+	Else
+		OutputDebugByte(AByte)
+		NextMagicalByteOffset = offset + (AByte & 0x3F) //TODO: & 0x3F is just a guess.
+	End If
+End Function
+
+//outputOffset should be equal to NextZeroSeriesOutputOffset upon entry
+Function GetZeroSeries()
+	ZeroesCount = 0
+	TermFound = False
+	While Not TermFound //Think about NextZeroSeriesOutputOffset <= outputOffset, if you set ZeroesCount=0 in place of TermFound=True below
+		AByte = GetByte
+		If AByte & 0x40 Then //May be "AByte & 0xD0" but I haven't seen one without flag 0x40 set yet
+			OutputZeroes(ZeroesCount)
+			NextZeroSeriesOutputOffset = outputOffset + (AByte & 0x3F)
+			TermFound = True
+		Else
+			ZeroesCount = ZeroesCount + AByte
+		End If
+	End While
+End Function
+
+//offset should be after the 01 terminator of the header as you call this function
+Function Decompressor()
+	outputOffset = 0
+	NextBlockOffset = offset
+
+	//At the start of each block (code needs written)
+	While NextBlockOffset < FileLength
+		BlockLength = GetInt()
+		NextBlockOffset = offset + BlockLength
+		NextMagicalByteOffset = offset
+		NextZeroSeriesOutputOffset = outputOffset //TODO: Not every block starts with 0s. See the second block in ms_credits_0. It starts with 0x20, then literals.
+
+		//Until each block is completely read. (TODO: Check whether block ends exactly as expected.)
+		While offset < NextBlockOffset
+			If offset == NextMagicalByteOffset Then
+				GetMagicalByte //First is always? a MagicalByte
+			Else If outputOffset == NextZeroSeriesOutputOffset Then
+				GetZeroSeries //Second is always? a ZeroSeries
+			Else //I think there's more to it than this. MagicalByte likely affects how you interpret certain bytes.
+				OutputByte(GetByte)
+			End If
+		End While
+	End While
+End Function
+
+...So to make a program to help me figure this out, I want two fixed-width RichTextBoxes, and I want to color input data depending on what it's read as, and color output data depending on what it came from.

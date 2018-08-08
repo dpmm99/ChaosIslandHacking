@@ -1,0 +1,77 @@
+Palette (*.PAL) files are Microsoft RIFF format.
+The game technically supports 6 sprite (*.SPR) file formats (0 through 5), but only 0, 2, 3, and 5 are supplied.
+If Format is not 0, round the width up to the nearest multiple of four that is greater or equal to the supplied width, giving you the Data Width. The width as stored in the file header represents the intended width of the image, while the actual data represents an image that is Data Width pixels wide.
+In the case of Formats 3 and 5, which are the only formats that may contain multiple images, there is no additional header between the images.
+In all cases, pixel data is stored sequentially in left-to-right, top-to-bottom order.
+
+The formats in brief:
+0 - Single image with RLE
+2 - Single image without RLE
+3 - Multiple images with RLE
+5 - Multiple images without RLE
+
+--
+
+Overall SPR file structure:
+
+Format (int)
+Width (int)
+Height (int)
+
+If Format is 3 or 5:
+	Image Count (int)
+	Unknown Animation Data (Image Count * 4 bytes)
+End If
+
+Stage 1 Decompression Buffer Size (int)
+
+If Format is 0 or 3:
+	Row Beginnings (Height * Image Count ints)
+End If
+
+Header Terminator (1 byte, must be 0x01)
+
+Data blocks:
+	Block length (int, not exceeding 0x1000 in practice)
+	Compressed Data (Block Length bytes)
+End data blocks
+
+--
+
+Structure of Compressed Data:
+
+Reference Flags (byte)
+Unit 0 (byte or short)
+Unit 1
+Unit 2
+Unit 3
+Unit 4
+Unit 5
+Unit 6
+Unit 7
+
+This repeats until the end of the block is reached. Regardless of whether a block ends before Unit 7 is encountered, the next block begins with a new Reference Flags byte.
+
+Each bit of the Reference Flags (from the LSB up) tells whether the associated following unit is a byte (bit=0) or a two-byte backwards reference (bit=1).
+
+If the unit is a backwards reference, read it as a little-endian short. The upper 4 bits tell how much data to copy (3 to 18 bytes), and the remaining 20 bits tell how far back in the output to copy from.
+
+Otherwise, copy the unit directly to the output buffer.
+
+--
+
+Stage 2 decompression (RLE; only for Formats 0 and 3):
+
+In the case of Format 0 and Format 3 files, the output from the above decompression pass still contains sequences of RLE bytes, which represent transparent, shadow, or team color pixels. Additionally, "Row Beginnings" that were listed in the header account for transparent pixels at the end of some rows.
+In an RLE Sequence, the upper two bits of each byte is an opcode, and the lower two bits are a parameter.
+Starting with the first byte of input (which is the output of the above decompression pass), each byte is assumed to be RLE until a byte with the opcode "01" is encountered. The remaining lower six bits tell exactly how many bytes of input to process (not including this byte itself) before the next RLE sequence is expected. Because the range is 0x00 to 0x3F (0 to 63 bytes), there may be many occurrences of 0x7F in images without many special pixels.
+
+Where X is the lower six bits of a given byte within an RLE sequence:
+Opcode	| Meaning
+00	| Output X transparent pixels
+01	| End the current RLE sequence; after processing X more input bytes, treat the next sequence of input bytes as RLE
+10	| Output X team color pixels
+11	| Output X shadow pixels
+
+In addition, Row Beginnings and Data Width must be considered at this stage. When the input offset is equal to a Row Beginnings array entry, the remainder of the current row of pixels (up to Data Width) must be filled with transparency.
+While (Output Offset) modulus (Data Width) is nonzero, output a transparent pixel and advance the output offset by one (byte).

@@ -1,0 +1,17 @@
+Test1 is the highlight version (ms_start_1 or 2? Whichever.)
+
+5c504e is the offset into disk2.cfs for ms_start_0.SPR
+Changed 5c7c51 (2c03) from 20 to 00 for Test2.
+
+Undid that and changed the last byte from 66 to 00 for Test3.
+
+Undid that and changed the next-to-last byte from 41 to 00, which was the same as Test3.
+
+Undid that and changed the third-from-last byte from 00 to FF, which still was the same.
+
+Undid that and changed the next 00 to FF (9 bytes earlier) for Test4.
+
+Undid that and changed the third 8A to 88 (5 bytes before the file end) for Test5.
+--It changed just 2 pixels, 102 pixels apart.
+
+Zeroed out everything from 5C6666 through 5C7C7E. The game couldn't handle it and failed to load.

@@ -1,0 +1,150 @@
+There's 1 TXT file: dinfo.txt. Contains dinosaur info of some sort...
+There's 1 UDF file: unittileset.udf
+set.bin and chaos.cnt in the game directory are plain text.
+Who knows what all the data in SAVEGAME could be?
+levelobjanim.ldf has unique info in it
+
+
+I'm pretty sure most of the map trigger data is hardcoded. There are lots of strings like "You need to find the Artificial Nest." in the EXE.
+
+
+
+The following are parameters you may find in map files.
+
+LEVELOBJ TERRAIN:
+Redwood
+Banyan
+BushyPalm
+Bushy1
+Bushy2
+Bushy3
+Conifer1
+Conifer2
+Confier3
+ElGrass
+PalmTree
+PalmTree2
+CrazyPalm
+lvl2archr
+lvl2archl
+Lvl6Cliff
+Lvl6Bridge
+lvl12rock
+lvl12hill
+IcePlant1
+IcePlant2
+Rock3
+Rock4
+NestCompy
+NestDilo
+NestPachy
+NestSteg
+NestTric
+NestTRex
+NestRaptor
+
+UNIT:
+Eddie
+Sarah
+Nick
+Kelly
+Malcolm
+GradStudent
+HunterCamp
+Bridge2
+scout
+Rifleman
+Jeep
+HighHide
+HunterFence
+Compy
+Dilo
+Pachy
+Stegosaur
+Triceratops
+Raptor
+TRex
+Para
+Tent
+FireBarrier
+HunterTent
+BaseCamp
+BaseCamp2
+Incubator
+HJeepShed
+HSnaggerShed
+HTankShed
+Snagger
+Tank
+HArtNest
+HShelter
+Shelter
+ArtificialNest
+ToolShed
+ElectronicsShed
+ScienceLab
+
+UNIT EGGS:
+Compy
+Dilo
+Para
+Pachy
+Stegosaur
+Triceratops
+Raptor
+TRex
+
+UNIT SUPPLIES:
+none
+armor2
+armor3
+carry2
+carry3
+speed2
+speed3
+attack2
+attack3
+vision2
+vision3
+
+UNIT BTREX:
+"none"
+
+UNIT TNT:
+"none"
+
+AIRDROP:
+armor1
+attack2
+
+Other:
+HStegosaur
+HRaptor
+HTRex
+HTriceratops
+AllHunters
+AllGatherers
+AllDinos
+All
+
+Also found in EXE:
+Bridge
+HCompy
+HPachy
+HDilo
+HPara
+BaseCamp3
+SuperInc
+Anest (But I saw ArtificialNest in a map file...)
+Eshed (but I saw ElectronicsShed)
+SciLab (but I saw ScienceLab)
+HHide (not sure if High Hide or Hunter High Hide. Probably the former, but I already saw HighHide)
+FireB (but I saw FireBarrier)
+Rock1
+Rock2
+Rock5
+Rock6
+
+It looks like you cannot put Remdul on a map directly, as there is no "remdul" string. The same goes for "grunt" (an apparently unused ogre-looking sprite) and "mib" (an also apparently unused Men-In-Black sprite).
+
+

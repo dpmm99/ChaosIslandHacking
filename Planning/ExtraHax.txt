@@ -1,0 +1,172 @@
+Re-consideration of the compression bytes:
+
+00 - The following is a number of times to repeat a literal, terminated by a 4x or higher. (Sum up the bytes before the 4x+)
+47 - Terminate the count. The following 7 bytes (with the next opcode injected before the 7th) are literal
+00 - Another instance of the repeating, but it seems to magically know we're repeating 0s
+42 - Terminate the count. The following 2 bytes are literal
+80 - Inject zeroes of the following 1-byte count (this is the weirdest one)
+65 - The next 5 bytes are literal
+10 - 10 00 81 05 = 88 88 8A 8A 8A C7 somehow
+00 - The following are 6 literals (Or an arbitrary string of literals > 4x? Terminated by 01)
+01 00 02 - C9*4 + 8x*3 + C9*???
+08 70 - C9*??? + 87
+
+If you skip all 0s, 0x28 in the output file maps to 88 88 88 8A 8A C7.
+
+
+
+Working on hacking the EXE to turn off full-screen mode:
+Fullscreen: WS_POPUP | WS_VISIBLE = 0x80000000 | 0x10000000 = 0x90000000
+Windowed: WS_OVERLAPPEDWINDOW | WS_VISIBLE = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU 
+| WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXMIZEBOX | 0x10000000 = 0x10CF0000
+
+So change the value (when the program is based at 0x400000) at 
+0x4330F0 (324F0 in the file) from 68,00000890 to 
+68,0000CF10
+...still did not work when I changed CreateWindowExA that way. Need to just check the following ASM, I guess.
+
+So let's also change the style from 8 (WS_EX_TOPMOST) to 0
+Change
+4330FB from 6A 08 to
+6A 00
+
+
+Search for GetProcAddress (should find at 00412334. Subtract 400C00 to get the EXE address.)
+
+
+Resized the resolution at:
+004123E6 (In EXE, 117E6. Need to NOP the previous 50 and two 68[...]s--the PUSHes. May also need to set EAX to 0 or not zero depending on the folowing TEST EAX,EAX error checker. Now testing with MOV EAX, 0)
+(somewhere around 004123C7, it made the big window)
+
+Fullscreened at:
+0041254C (In EXE, 1194C. Again, need to NOP the PUSHes--6A 01, 6A 00, 50. 8B08 may or may not be OK.)
+
+Fullscreened again at:
+00412576 (In EXE, 11976. Again, need to NOP the PUSHes--6A 01, 6A 00, 50. 8B08 may or may not be OK.)
+Looks okay up to 41257B, but in the end, it halts with an access violation. I guess something wants one of those functions to be performed.
+
+Attempt #2:
+@ 4123DB, change to
+68 00030000
+68 00040000
+to ensure 1024x768 screen resolution.
+And @412545 and 41256F change the PUSH 1 (6A 01) to PUSH 8 (6A 08), and we have a borderless window for the moment!
+Still need to stop it from changing when you alt-tab.
+There's a Case WM_ACTIVATEAPP @433CED. That probably doesn't need any code in it other than the POPs. :)
+
+Occurrences of 68 E0 01:
+EXE	Runtime
+115D4	4121D4	SetRect
+117DB	4123DB	ChangeDisplaySettings
+118E1	4124E1	SetRect
+121E5	412DE5	SetRect
+123F4	412FF4	CALL CISLAND.00412EB0 (SelectObject, GetDC, Alloc CreateDIBSection, etc.)
+12825	413425	SetRect
+1FBCA	4207CA	SetRect
+24054	424C54	SetRect
+241C0	424DC0	SetRect
+324E4	4330E4	CreateWindowExA
+4ACC0	44B8C0	CALL CISLAND.00413540 (similar to above)
+4C1E8	44CDE8	SetRect
+
+Seems to be a WM_SYSKEYDOWN/WM_SYSKEYUP override at 433D4E
+Attempting to NOP (0x90) from 433D4B through 433D53 (key code 0x12, alt) and through 433D5C (key code 0x20 in a CMP)
+There's a switch at 433C40. I'm going to locate in its table where it points to the WM_SYSKEY* code and point that to the default case instead.
+Default case is at 43413B. 433D4B (WM_SYSKEY*) is at 434164 and 434168. Change those both from 4B3D4300 to 3B414300.
+Also stop the WM_COMMAND (at 433E48, targeted by 433D2F and case 433C40) from being processed. Change 433D2F from 0F84 13010000 to 0F84 06040000 (so it targets 0043413B, the default case).
+Nope, that's a no-go. The window hangs while half-created. I guess I'm checking for something more specific.
+Maybe check in WM_ACTIVATEAPP instead (433CED). There should be a SetCooperativeLevel call in there.
+	Contains jumps to 44C480, 434133 (which just POPs and clears EAX).
+		Contains jumps to 44C491 and DS:[EAX+20] and DS:[EDX+30], where EAX/EDX come from DS:[ECX]. The first ends up at 453230, which just changes EAX; the second, 453020.
+			Contains jumps to 45303F
+Hey, in other news, at 44BCA1 I found that the game uses SmackWait.
+
+xx
+
+6CFA8C should contain the file handle for disk2 returned by CreateFileA.
+To break on ReadFile near the end of disk2.cfs, put a conditional breakpoint "[DWORD 006CFA64]==2C3" @ 455DB2. It'll run twice, but the value won't reach 2C5 (the number of files in disk2). Put a break on the next line after that, so it'll always break there.
+There, EDX contains a pointer to a pointer to the buffer where the bytes are stored after being read.
+6CFBD4 contains the offset within disk2 that you're reading from. So, I need to put a conditional breakpoint on that ReadFile for one of the sprites, say "[DWORD 6CFBD4]==5C504E". That should pause execution just as you're starting to read ms_start_0.SPR.
+Nope, that's too late. Try "[DWORD 6CFBD4]==06CC29C6" for copyright.SPR.
+That didn't stop it, so this ReadFile may not be used for the sprites. Let's try ==06CC2998 instead.
+That didn't stop it either. How about we try A1C933 (the last number in version.ldf)?
+
+It looks like a region starting around 440670 is checking version.ldf to see if each character is a valid hexadecimal character.
+4406B2 definitely looks like it's checking for a new line in LDF files (possibly only in the case of comments).
+4405D6 is the code that executes when a 0D is found.
+454BC7 calls the function that calls ReadFile, I think (or a parent function), so I'm putting a breakpoint at 454BCC.
+When 454BC3 is called ECX contains the read address from within the file and is PUSHed.
+That occurs once per character in the file until the Minor Version (124546B3) is reached in disk1.cfs after disk2 is checked. So put a breakpoint on that line with "ECX=124546B3" and step forward one at a time.
+
+4564D0 is reached when the character read from the LDF is not a number. (Probably only used after you find the first digit of the Minor Version)
+4408D4 is the parent loop, which checks if the char is 78, 58, a digit, a hex digit, a space, etc.
+433237 occurs after that file is done, I think... Not far below it, it mentions GameSpeed!
+45BDD9 through 45BDEC, at least, look at some of the data before a filename in the cfs struct, I think.
+43331A calls something that kills my screen. Traced it to 412803, a call to DDRAW.BAAB4790. The debugger can't continue once it reaches a EnterCriticalSection.
+
+
+An idea to consider: just inject a function in place of each ReadFile, and store the ReadFile parameters in some memory that you can look at after the program exits.
+
+This is how I got the program to load my DLL:
+<At 45E9FE:
+PUSH CISLAND.00471094
+CALL DWORD PTR DS:[<&KERNEL32.LoadLibraryA>]
+(Now check if it's OK, @45EA09)
+MOV ESI,EAX
+TEST ESI,ESI
+JE SHORT CISLAND.0045EA79
+(Done!)
+
+So I need a place to put my DLL name.
+475F70 looks empty. I'll store "CRFI.dll" there.
+
+I need a space with 22 bytes plus whatever it takes to jump back.
+Found space at 00465CC0. Type the above ASM there twice, then JMP to the place it came from.
+
+But I need the proc address, too. So I need the proc name string. Put that at 475F7C, right after my DLL string.
+And find a place to store the proc address. 475F88 is sadly not writable--we need heap space. I'll stash it at 7E0FF0
+
+Now I have to read the proc address from 7E0FF0, which means I need extra space around the ReadFile. Luckily, I can just JMP and move the commands.
+JMP to 465D00 in place of the CALL DWORD PTR DS:[<&KERNEL32.ReadFile>] ([00492460]).
+Repeat that call but for whatever you stored it in.
+JMP back.
+
+
+>
+
+
+Please NOP out from 433650 to 433666.
+I don't need any dumb cursor hiding going on.
+You can't set any breakpoints that occur before the Loading screen goes away.
+May try only breaking on ReadFile when bytesToRead is 0x1000, too.
+
+Tiles1.SPR: F4191DD
+Tiles2.SPR: F4E2CC2
+
+Run API Monitor once more--AFTER the game starts, if you can (which is kinda the whole problem, huh?)
+No, actually, I give up.
+I just need to manually try to find every place where ReadFile returns and see if I can locate the sprite decompressor.
+
+The heap pointed to by 419984 may or may not be the decompression buffer. (Called from procedure at 45B8B0)
+
+45330D may be the call to the function at 453370, which calls a function that calls SetFilePointer.
+EAX=ESI at the end of 453350, ESI=EAX, EDX=[ESI], [EDX+8]
+Hey, the ASCII string "Compressing..." is referenced from 4550F1 right before CALL EAX (from whatever's at 48FBFC) and CALL 455620
+In file at 75E28 (so +400C00=runtime addr): "SPRITE"
+In file at 754F8 is a sprite filename
+
+
+
+
+ONCE AGAIN I tried to get rid of the annoying fullscreenness:
+Wait until SetFilePointer 5D8568.
+
+Break at 4123C7. For reference, It points to 737685D8.
+Change 7378D44B to "6A 11", to change the SetWindowPosition flags to SWP_NOSIZE SWP_NOACTIVATE.
+	Alternate: Break at 7378D44E; change [ESP+0x10] and [ESP+0x14] to 280 and 1E0 respectively.)
+Break at 73791B78; change [ESP+0x04] and [ESP+0x08] to 280 and 1E0 respectively
+	(You can't edit this assembly easily)
+Change 73791BBA to "6A 02" (change ChangeDisplaySettingsEx flag from FULLSCREEN to TEST)
+7378D4ED
+
+...and once again, failed

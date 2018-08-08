@@ -1,0 +1,770 @@
+Loading copyright.spr file descriptor:
+
+		Seek to 6CC2998 (which was stored at ESI+10, or A507F0)		
+		ReadFile: 4 bytes, buffer at 12FBF8		
+		12FC08 is put in ECX ("pointer to next SEH record")		
+		12FBC8 (pointer on the stack to the pointer to the next SEH) is put in FS:[0] (7FFDE000)		
+		Pop 'n' return		
+		The just-loaded value is put in EAX		
+		Calls CIsland.00457970(2A, 1)		
+			Puts next read position (6CC299C) on the stack	
+			Copies the just-read value to ESI	
+			CMP ESI, -20	
+			Put EDI (A58380) on stack	
+			JA 004579AF (not taken)	
+			Test ESI,ESI	
+			JNZ 00457984 (jump is taken!)	
+			//Put 1 in ESI	
+			Put 1, from the function call, in EDI	
+			Loop:	
+				CMP ESI,-20
+				JA 00457998 (not taken)
+				Put ESI (still the last-read value) on stack
+				By calling 4579C0, checks and makes sure there's enough heap space (in chunks of 0x8000)
+			Puts that last-read value back into EDX	
+			Call 00455D40(06CC299C, 00A583A0, 2A (last-read val, which I think is length to read), 0012FBF4) with 00A507E0 in ECX. (This is a fancy ReadFile for the CFS format)
+				Put 0012FC08 on stack
+				Put stack pointer at FS:[0] (probably to avoid a bunch of POPs)
+				Enter critical section
+				Put 06CC299C in EAX //Here up to the jump makes sure we're advancing sequentially within the file so we don't have to call SetFilePointer)
+				Put it in ECX from a different source
+				CMP EAX,ECX
+				Jump to 00455D95 (instead of going on to the same SetFilePointer call that started all this, go two ASM lines past it)
+				EDI = 0012FBF4
+				TEST EDI, EDI
+				JNZ 00455DA1 (take this jump)
+				ReadFile: Buffer=00A583A0, BytesToRead=2A, location to store number of bytes read = 0012FBF4
+				Leave critical section
+				ECX = 12FC08
+				EDI = A58380
+				EAX = 1
+				ESI = 6CC299C
+				Store ECX at FS:[0]
+				EBX = 9A11BC
+				Return
+			Error out if EAX is 0	
+			Put 2A in EAX	
+			Add that 2A into ESI (6CC299C)	
+			EAX = [EDI+0x14], which is A583A0 (EDI appears to point to a list of buffer locations, incremented by 0x20 each)	
+			ECX = [EAX+4], which is 6CCD9F6 (EOF location, read from the descriptor)	
+			EDX = [EAX], which is 06CC29C6 (start of file, read from the descriptor)	
+			Subtract EDX from ECX, leaving B030 (file length)	
+			Put ECX in the stack (overwriting existing data)	
+			Put ESI at [EAX] (which was the file start location, and is still the file start location, but now as calculated from the descriptor)	
+			Put ECX from the stack into EDX	
+			EAX = [EDI+0x14], which leaves EAX unchanged, A583A0	
+			EDX += ESI (making EDX the end-of-file position, but calculated based on data from the descriptor)	
+			Put EDX into [EAX+4] (again, overwriting the same data)	
+			ECX = [EDI+8], or A507E0	
+			Call 00455B30 (from this location, 00454ECF)	
+				EAX = [ECX+C] (ECX is still A507E0; this points at 01 00 00 00, index 4 in whatever struct that is, and index 5 is 6CC29C6, and index 6 is 01 ain, and 7 and 8 are 0, and 9 is D:\DATA\disk1.CFS)
+				Increment EAX and put it back
+			Get EDI (A58380) from stack	
+			Put 0x20000000 in EAX	
+			Get ESI (A507B0) from stack	
+			Return	
+		Put EAX in ESI and compare it to 0x20000000		
+		Jump to 00453762 if inequal (not taken)		
+		EAX = [ESP+24] (0012FC2C, another stack int)		
+		If EAX != 0, jump to 00453770 (jump taken)		
+		Put EDI at [EAX] (so store 00A58380 at 0012FC2C)		
+		ESI = 0x20000000		
+		ECX = [ESP+C] (which is 0012FD5C, the next SEH record)		
+		EAX = ESI		
+		POP EDI		
+		PEP ESI		
+		FS:[0] = ECX		
+		POP EBX		
+		ESP = ESP + C		
+		Return		
+	EAX=[ESP+8] (00A58380)			
+	POP EDI (was "copyright.spr"; now 0012FC66)			
+	POP ESI (was 004767A5, now 00000001)			
+	POP ECX (was 12FD5C, now A58380)			
+	Return to 004246B0			
+ESP += 8 (pop twice)
+ESI = EAX (was 4767A5, now A58380)
+EAX = ESP+0x18 (00000000)
+ECX = ESP+0x14 (0012FC50, which contains 7E44048F, which is in USER32)
+EDX = [ESI] (was 6CCD9F6, now points to "PIE")
+ECX = ESI
+Call [EDX+38]=00454B60(what was ECX before that last line, 4, EAX) (So the params are 12FC50, 4, 12FC54.)
+	Install SEH 00465C08
+	EAX = FS:[0] (0012FD5C)
+	Put that on stack
+	FS:[0] = ESP (12FC20)
+	Subtract 8 from stack pointer (revealing 00000000 and A58380 already on the stack)
+	Push EBX, ESI, EDI
+	ESI=ECX
+	Push 0048FBC0
+	Enter critical section
+	ECX = [ESI+4] (06CC29C6)
+	EAX = [ESI+14] (00A583A0)
+	EDX = [ESP+28] (00000004)
+	[ESP+1C] = 0 (was FFFFFFFF)
+	EAX = [EAX+4] (06CCD9F6)
+	EDI = EDX+ECX = 06CC29CA
+	CMP EDI,EAX
+	JBE 00454BB0 (jump is taken, skipping SUB EAX,ECX and MOV EDX,EAX)
+	EDI = [ESP+2C] (0012FC54)
+	TEST EDI,EDI
+	JNZ 00454BBC (jump is taken, skipping just EDI = ESP+10)
+	Call 00455D40(06CC29C6, 0012FC50, 4, 0012FC54) with 00A507E0 in ECX
+		Similar to previous call to same function, but with these numbers.
+		ReadFile with pBytesread=0012FC54 (0), bytestoRead=4, buffer=12FC50
+		Results in 0012FC50 being 2 (from 06CC29C6 in disk1)
+	EAX = [ESP+14] (2)
+	CMP EAX,5 (switch 0..5)
+	JA 004247D9 (not taken)
+	JMP [EAX*4+42480C] (jump to 00424736)
+	<(code that doesn't run for this file type (#2), at 4246D5)
+	Case 0: (@4246DC)
+	Push 34
+	Call 00455EB0
+	ESP += 4
+	[ESP+10] = EAX
+	TEST EAX,EAX
+	[ESP+128] = 0
+	JE 4247CE
+	ECX = EAX
+	CALL 43E960 (moves around some data near ECX and zeroes out some stuff, among other things)
+	JMP 004247D0
+
+	Case 1 (@00424709):
+	Push 34
+	Call 455EB0
+	ESP += 4
+	[ESP+10] = EAX
+	TEST EAX,EAX
+	[ESP+128] = 1
+	JE 4247CE
+	ECX = EAX
+	CALL 43F5B0 (kinda similar to 43E960)
+	JMP 004247D0
+	>
+	Case 2: (@00424736)
+	Push 18
+	Call 00455EB0
+		EAX = [ESP+4] (00000018 that we just pushed)
+		Call 00457970(EAX, 1)
+			Push ESI (00A58380)
+			ESI = [ESP+8] (18)
+			CMP ESI,-20
+			PUSH EDI
+			JA 4579AF (not taken)
+			If ESI != 0, jump to 00457984 (taken. Otherwise, ESI = 1 and you end up at the same spot.)
+			EDI = [ESP+10] (1)
+			Loop:
+				CMP ESI,-20
+				JA 457998 (not taken)
+				Push ESI
+				Call 004579C0 (which I think primarily allocates more heap space if necessary)
+					EAX = [ESP+4] (18)
+					PUSH ESI (18)
+					ESI = EAX+F (27)
+					EAX = [47ABFC] (an immediate, so EAX = 1E0, the image width)
+					ESI &= FFFFFFF0 (resulting in 20--this is rounding up the original 18)
+					CMP ESI,EAX
+					JA 4579E6 (not taken)
+					ECX = ESI
+					ECX >>= 4 (yielding 2)
+					PUSH ECX
+					CALL 45BE90
+						PUSH ECX
+						ECX = [47ABF8] (immediate, val=478BD8)
+						PUSH EBX
+						EBX = [ESP+C] (2)
+						Push EBP, ESI, EDI
+						[ESP+10] = ECX
+						Loop: (@45BEA3)
+							EAX = [ECX+10] (A50000)
+							CMP EAX,-1
+							JE 45BF34 (not taken)
+							EDI = [ECX+8] (478C30)
+							EBP = ECX+2018 (47ABF0)
+							ESI = EDX - ECX - 18 (40)
+							ESI >>= 3 (8)
+							ESI <<= C (8000)
+							ESI += EAX (A58000)
+							CMP EDI,EBP
+							JNB 45BEF9 (not taken)
+							Loop: (@45BECB)
+								EAX = [EDI] (CD)
+								CMP EAX,EBX
+								JL 45BEEC (not taken)
+								CMP [EDI+4],EBX (EDI+4 is 478C34, [EDI+4] is F1)
+								JBE 45BEEC (not taken)
+								Push EBX, EAX, ESI
+								Call 45C0D0
+									PUSH EBX (2), EBP (47ABF0), ESI (A58000), EDI (478C30)
+									EDI = [ESP+14] (A58000)
+									EAX = [EDI+4] (C3)
+									ECX = [EDI] (A58035)
+									CMP EAX,EDX
+									[ESP+14] = ECX
+									ESI = ECX
+									EBX = EDI+F8 (A580F8)
+									JB 45C12B (not taken)
+									EAX = ECX+EDX (A58037)
+									[ECX] byte = DL (02, the lowest byte of EDX)
+									CMP EAX,EBX
+									JNB 45C10A (not taken)
+									ESI = [EDI] (A58035)
+									EAX = [EDI+4] (C3)
+									ESI += EDX (A58037)
+									EAX -= EDX (C1) (@45C103 I accidentally hit Trace Over)
+									[EDI] = ESI
+									[EDI+4] = EAX
+									JMP 45C116
+									EAX = EDI+EDI*2
+									EAX = EAX+EAX*4
+									EDX = EAX
+									EAX = ECX+8
+									EAX <<= 4
+									EAX -= EDX
+									POP EDI, ESI, EBP, EBX
+									Return
+								ESP += C
+								TEST EAX,EAX
+								JNZ 45BF48 (I think it was taken, which exited 2 loops)
+						ECX = [ESP+10]
+						[47ABF8] = ECX (I think this was 478BD8)
+						EDX = [EDI]
+						EDX -= EBX
+						[EDI] = EDX
+						[ECX+8] = EDI
+						POP EDI, ESI, EBP, EBX, ECX
+						Return
+					ESP+=4
+					TEST EAX,EAX
+					JNZ 4579F6 (I just assume this was taken)
+					<(If it wasn't taken
+					EDX = [491184]
+					HeapAlloc(9A0000, 0, ESI)
+					>
+					POP ESI
+					Return to 457993
+				ESP+=4
+				JMP 45799A
+				TEST EAX,EAX
+				JNZ 4579B1 (still gonna assume it was taken)
+				POP EDI, ESI
+				Return to 00455EBC (also exited what I called a loop at some point)
+		ESP += 8
+		Return to 0042473D (now I'm back to being on track! EAX=A583D0, ECX=478BD8, EDX=CB, EBX=0, ESP=12FC38, EBP=FFFFFFFF, ESI=A58380, EDI=12FC66, last thing on stack is 00000018)
+	ESP += 4 (12FC3C)
+	[ESP+10] = EAX
+	TEST EAX,EAX
+	[ESP+128] = 2
+	JE 004247CE (not taken)
+	ECX = EAX
+	CALL 0043E4C0
+		EAX = ECX (A583D0)
+		EDX = 0
+		ECX = FFFFFFFF
+		[EAX+4] = EDX (0... So, it looks like A583D0, perhaps 3D0 after the start of the second heap area, is a structure with a guaranteed pointer to 0046ED90)
+		[EAX+8] = ECX (FFFFFFFF)
+		[EAX+C] = ECX (FFFFFFFF)
+		[EAX+14] = EDX (0)
+		[EAX+10] = 1
+		[EAX] = 46ED90
+		Return
+	JMP 004247D0
+	<(more code that doesn't run for this file type (#2))
+	Case 3: (@42475C)
+	Push 3C
+	Call 00455EB0
+	ESP += 4
+	[ESP+10]=EAX
+	TEST EAX,EAX
+	[ESP+128] = 3
+	JE 004247CE
+	ECX = EAX
+	CALL 00435FE0
+	JMP 004247D0
+
+	Case 4: (@424782)
+	Push 3C
+	Call 455EB0
+	ESP += 4
+	[ESP+10] = EAX
+	TEST EAX,EAX
+	[ESP+128] = 4
+	JE 4247CE
+	ECX = EAX
+	CALL 436C80
+	JMP 4247D0
+
+	Case 5: (@4247A8)
+	Push 20
+	Call 455EB0
+	ESP += 4
+	[ESP+10] = EAX
+	TEST EAX,EAX
+	[ESP+128] = 5
+	JE 4247CE
+	ECX = EAX
+	Call 435620
+	JMP 4247D0
+	>
+	[ESP+128] = EBP (FFFFFFFF. Finally @4247D0)
+	EBX = EAX (A583D0)
+	TEST EBX,EBX
+	JE 4247E5 (not taken)
+	EDX = [EBX] (0046ED90)
+	PUSH ESI
+	ECX = EBX
+	CALL [EDX+24] (43E850)
+		ESP -= 14 (12FC20)
+		PUSH EBP
+		PUSH ESI
+		ESI = [ESP+20] (A58380)
+		PUSH EDI (12FC66)
+		EDI = ECX (A583D0)
+		EAX = [ESI] (470B00)
+		ECX = ESP+24 (12FC38)
+		PUSH ECX
+		EDX = EDI+8 (A583D8)
+		PUSH 4
+		PUSH EDX
+		ECX = ESI
+		CALL [EAX+38] (454B60) (Params are A583D8, 4, 12FC38, 12FC66?)
+			PUSH -1, 465C08 (SEH)
+			EAX = FS:[0] (7FFDE000, "PIE")
+			PUSH EAX
+			FS:[0] = ESP
+			ESP -= 8
+			PUSH EBX, ESI, ED
+			ESI = ECX
+			Enter critical section
+			ECX = [ESI+4] (06CC29CA, which points to the width of copyright.spr)
+			EAX = [ESI+14] (A583A0)
+			EDX = [ESP+28] (4)
+			[ESP+1C] = 0 (I'm guessing this value is used to tell if EnterCriticalSection failed?)
+			EAX = [EAX+4] (06CCD9F6, end of copyright.spr)
+			EDI = EDX+ECX (06CC29CE, which points to the height of copyright.spr)
+			CMP EDI,EAX
+			JBE 454BB0 (taken)
+			EDI = [ESP+2C]
+			TEST EDI,EDI
+			JNZ 454BBC (taken)
+			PUSH EDI (12FC38), EDX (4)
+			EDX = [ESP+2C]
+			PUSH EDX (A583D8), ECX (06CC29CA)
+			ECX = [ESI+8]
+			CALL 00455D40(06CC29CA, A583D8, 4, 12FC38) for the third time... So, it's (filePos, outputLoc, lengthToRead, stack spot for bytes that get read). Indeed, 00455D40 is just a fancy ReadFile for the CFS format.
+				Do the usual stuff and return to 454BCC
+			TEST EAX,EAX
+			JE 454BD7 (not taken)
+			EBX = 20000000
+			JMP 454BDF
+			EAX = [EDI] (4)
+			ECX = [ESI+4] (06CC29CA, start of the data we just read)
+			ECX += EAX (06CC29CE, start of the next int)
+			PUSH 48FBC0 (critical section argument)
+			[ESI+4] = ECX
+			[ESP+20] = -1
+			Leave critical section
+			ECX = [ESP+14] (12FD5C, the next SEH)
+			POP EDI (A583D0)
+			EAX = EBX
+			POP ESI
+			FS:[0] = ECX
+			POP EBX (A583D0)
+			ESP += 14
+			Return to 43E86E
+		EAX = [ESI] (470B00, "PIE")
+		ECX = ESP+24 (12FC38)
+		PUSH ECX
+		EDX = EDI+C (A583DC)
+		PUSH 4, EDX
+		ECX = ESI
+		CALL EAX+38 (00454B60 - The third time we've called this. It probably requests that we read the height from the file this time. Params: A583DC, 4, 12FC38)
+			(I don't want to go back in this function again)
+			Return to 43E880
+		EAX = [ESI] (470B00, "PIE)
+		ECX = ESP+1C (12FC30, 00000001)
+		PUSH ECX
+		EDX = ESP+14 (12FC24, A58380)
+		PUSH 4
+		PUSH EDX
+		ECX = ESI
+		CALL [EAX+38] (00454B60 - The fourth call. Params: 12FC24, 4, 12FC30. So this data it's about to read is just going on the stack at 12FC24.)
+			(Yup, it put 0004B000, from 06CC29D2, on the stack at 12FC24. That's the first "weirdval" in format 02.)
+		EAX = [ESP+10] (the value we just read)
+		PUSH EAX
+		CALL 455EB0
+			EAX = [ESP+4] (the value we just read)
+			PUSH 1
+			PUSH EAX
+			Call 457970
+				PUSH ESI (A58380, which has a different purpose than the call earlier, so I guess it just wants to be able to use ESI)
+				Copies the just-read value to ESI
+				CMP ESI, -20
+				Put EDI (A583D0) on stack
+				JA 004579AF (not taken)
+				Test ESI,ESI
+				JNZ 00457984 (jump is taken!)
+				//Put 1 in ESI
+				Put 1, from the function call, in EDI
+				Loop:
+					CMP ESI,-20
+					JA 00457998 (not taken)
+					Put ESI (still the last-read value) on stack
+					By calling 4579C0, checks and makes sure there's enough heap space (in chunks of 0x8000)
+					ESP+= 4
+					JMP 45799A
+					TEST EAX,EAX
+					JNZ 4579B1 (taken)
+					POP EDI
+					POP ESI
+					Return to 455EBC
+			ESP+=8
+			Return to 43E89D
+		EBP = EAX (013B0048, which looks like 01300000 + 000B0048)
+		ESP += 4
+		TEST EBP,EBP
+		[EDI+4] = EBP ([A583D4] = 013B0048)
+		JNZ 43E8B2 (taken--alternative is POP EDI, ESP, EBP, then ESP += 14, then Return 4)
+		EDX = [ESI] (ESI is A58380, which points to 470B00)
+		EAX = ESP+C (12FC20, which contains 12FC66, and 12FC64 contains 005E0072, so since the debugger shows values outside the dump in most-to-least-significant order I think 12FC66 is 005E)
+		PUSH EBX
+		EBX = [ESP+14] (0004B000)
+		PUSH EAX
+		ECX = ESP+2C (12FC38, which points to 4)
+		PUSH 1
+		PUSH ECX
+		ECX = ESI
+		CALL [EDX+38] (00454B60 yet again--not exploring in it this time. Params: 12FC38, 1 (read one byte), 12FC20)
+		CMP BYTE [ESP+28], 1 (Wow, they really looked for the 01 I saw at the end of every header, and it's a literal after all!)
+		JNZ 43E937 (not taken--this code would likely be what deals with lists when the header doesn't promptly terminate with 0x01)
+		EDI = 0
+		TEST EBX,EBX
+		JBE 43E945 (not taken) (this is @43E8D5)
+		EDX = [ESI] (470B00, "PIE") (this is @43E8D7, which is returned to after each compressed block is processed once (which ignores ZeroSeries))
+		EAX = ESP+10 (12FC20, which is 1)
+		PUSH EAX
+		ECX = ESP+1C (12FC28, which is a return pointer to 455EBC)
+		PUSH 4
+		PUSH ECX
+		ECX = ESI
+		CALL [EDX+38] (00454B60 for, what, the sixth time? This time it reads the first compressed block's length)
+		EAX = [ESP+18] (0001000, which is the length of the first compressed block)
+		EDX = [ESI] (470B000 "PIE")
+		ECX = ESP+10 (12FC20, which is now 4)
+		[ESP+1C] = EAX (was 18, now 1000)
+		PUSH ECX, EAX, 48EA60
+		ECX = ESI
+		CALL [EDX+38] (00454B60 again)
+		EAX = [ESP+1C] (0001000)
+		EDX = EBX (0004B000)
+		EDX -= EDI (EDI is 0)
+		PUSH EDX, EAX, EBP, 48EA60
+		Call 4557E0
+			PUSH ECX
+			ECX = [ESP+8] (48EA60)
+			EDX = [ESP+10] (0001000 - the length of the first compressed block)
+			PUSH EBX, ESP, ESI, EDI
+			EDI = [ESP+1C] (013B0048)
+			EBP = EDX+ECX (48FA60) (48EA60 contains the first compressed block. Now we're going to write the second one to 48FA60, I guess.)
+			EDX = [ESP+24] (0004B000)
+			AL = 0 (so EAX is unchanged, but this tells me we're going to use the lowest byte of EAX soon)
+			EDX += EDI (+= 13B0048 = 13FB048)
+			CMP ECX,EBP
+			[ESP+10] = EDI
+			[ESP+1C] = EDX
+			JNB 455870 (not taken)
+****** This loop appears to process the block of compressed data. The data is at 48EA60 right now. EDI is the output stream location, 13B0048. ******
+			Loop: (@455808)
+				CMP EDI,[ESP+1C] (ESP+1C is 13FB048, which points to ABABABAB)
+				JNB 455870 (not taken)
+				{ (This section is "if AL == 0, meaning if this is the first iteration of this loop, get the first byte, advance the read pointer, AL = 1, and if we didn't already somehow exceed the file length, carry on like normal")
+				TEST AL,AL
+				JNZ 45581F (not taken. So, this tells me that AL is a mask for the MagicByte, and we're done and we go to 45581F when a MagicByte's series of 8 units is dealt with.)
+				AL = [ECX] (just one byte, FC, the first compressed data byte in this file. Now EAX is 000010FC, but that may be irrelevant.)
+				ECX++ (point to next byte of the compressed data)
+				BYTE [ESP+18] = AL (ESP+18 is 48EA60, which points to where we got AL from, so this does nothing this time)
+				CMP ECX,EBP (that's 48EA61 and 48FA60)
+				AL = 1
+				JNB 455870 (not taken--by the way, 455870 is the first instruction after the loop)
+				}
+				DL = BYTE [ESP+18] (we keep referencing the MagicByte here)
+				TEST DL,AL
+				DL = BYTE [ECX] (the next byte in the file, which is 00)
+				JE 455866 (jump is taken)
+				<(Writing the skipped code this time because I know it's relevant to my desires>
+				ECX++
+				BYTE [ESP+20] = DL
+				ESI = EDI (duplicate output stream location so it's in both ESI and EDI, but ESI will become "firstByteToCopyFrom")
+				DL = BYTE [ECX]
+				ECX++
+				BYTE [ESP+21] = DL
+				EBX = [ESP+20]
+				DX = WORD [ESP+20] (combined these two bytes)
+				EBX &= 0FFF (discarding the uppermost nibble--sounds like a Ref to me!)
+				DX >>= C (now DX has just the uppermost nibble)
+				ESI -= EBX (firstByteToCopyFrom = currentOutStreamPos - lowerThreeNibbles, for starters)
+				ADD EDX,3 (Hey, look, it's that thing where I said you copy (highestNibble>>C)+3 bytes)
+				ESI-- (firstByteToCopyFrom--)
+				TEST DX,DX
+				JBE 45586A (basically, jump if count is zero, which I think is impossible since we just added 3 to a lone masked nibble, meaning it can only be from 3 to 18...)
+				AND EDX,0FFFF (discard the upper half of EDX, which we haven't been messing with anyway)
+				Loop: (@45585B)
+					BL = BYTE [ESI]
+					BYTE [EDI] = BL (output the byte at ESI, which was firstByteToCopyFrom, to the output stream)
+					EDI++
+					ESI++
+					EDX--
+					JNZ 45585B (so loop until EDX is zero, because EDX was the length of data to copy, as I've been saying)
+				JMP 45586A (AL <<= 1)
+				>
+				BYTE [EDI] = DL (right now, that's 00)
+				EDI++
+				ECX++
+				AL <<= 1 (@45586A. On the first iteration, this makes EAX 0001002)
+				CMP ECX,EBP (compare current position, end of block)
+				JB 455808 (jump taken--back to the start of the loop)
+
+				<Here, the code is not repeated. That was the last line of the loop. But I'm going to continue tracing it for a while.
+				CMP EDI, [ESP+1C]
+				JNB 455870 (not taken)
+				TEST AL,AL (02)
+				JNZ 45581F (taken)
+				DL = BYTE [ESP+18] (FC, our MagicByte still)
+				TEST DL,AL (determine if AL & DL is zero)
+				DL = BYTE [ECX] (read our next byte into DL, which is 00 again)
+				JE 455866 (taken) (if (AL & DL) was zero, go to 455866)
+				(So again, we're not doing the Ref code, we're doing the Literal/ZeroSeries code)
+				BYTE [EDI] = DL
+				EDI++
+				ECX++
+				AL <<= 1
+				go back to start of loop
+				CMP EDI,[ESP+1C]
+				JNB 455870 (not taken)
+				TEST AL,AL (04)
+				JNZ 45581F (taken)
+				DL = [ESP+18] (still FC)
+				TEST DL,AL (this time should be different!)
+				DL = BYTE [ECX]
+				JE 455866 (not taken this time) *****
+				ECX++ (48EA64)
+				[ESP+20] = DL (01)
+				ESI = EDI (copy output buffer position to firstByteToCopy)
+				DL = BYTE [ECX] (00)
+				ECX++ (48EA65)
+				BYTE [ESP+21] = DL (so now WORD [ESP+20] is 0001)
+				EBX = [ESP+20]
+				DX = WORD [ESP+20]
+				EBX &= 0FFF (get just the lower 3 nibbles, the offset, in EBX, which is 1)
+				DX >>= C (get the upper nibble by itself)
+				ESI -= EBX (subtract the lower 3 nibbles, the offset, from the output buffer position to get the copy-from position)
+				EDX += 3 (add 3 to the upper nibble, which was the length, to get 3)
+				ESI-- (go back one more byte than was stated by the lower 3 nibbles alone)
+				TEST DX,DX
+				JBE 45586A (not taken)
+				EDX &= FFFF (make sure the upper word is blank now that it could possibly affect the code)
+				Loop: (@45585B)
+					BL = BYTE [ESI] (0)
+					[EDI] = BL (copy that 0 byte from outputbufferpos-lowernibbles-1 to outputbufferpos)
+					EDI++ (increment output buffer position)
+					ESI++ (increment copy-from position)
+					EDX-- (decrement bytes-to-copy, which is now 2)
+					JNZ 45585B (bytes-to-copy isn't 0 yet, so loop)
+					...But I'm not tracing this loop anymore. The loop exited after 3 runs as expected.
+				JMP 45586A (to the "AL <<= 1" line)
+				... (more code runs, but I'm not tracing unless I see something change. Didn't see any ZeroSeries code. I bet they run on a second pass.)
+				> (NOTE: It looks like, first, you decompress the references only. There's no code here for any ZeroSeries.)
+			(end of loop)
+			ECX = [ESP+10] (12FBEC, which is A58380)
+			EAX = EDI (13B8795)
+			POP EDI, ESI, EBP
+			EAX -= ECX (EAX was 13B0048, so now EAX is 874D)
+			POP EBI, ECX
+			Return to 43E919
+**** End of function that processes compressed blocks ****
+		EDI += EAX (874D)
+		ESP += 10 (12FC10)
+		EBP += EAX (13B8795)
+		CMP EDI,EBX (EBX is 0004B000, which I think is the output file length in this case)
+		[ESP+18] = EAX ([ESP+18] was 00001000 and is now 874D)
+		JB 43E8D7 (taken; alternative would end up in a return. This is a loop)
+		(I left out somewhere around 7-10 iterations of that loop)
+		EAX = 1
+		POP EBX, EDI, ESI, ESP
+		ESP += 14
+		Return 4 to 4247E5 (back to code in the default case of the switch block)
+	EAX = [ESI] (470B00, "PIE")
+	ECX = ESI (A58380)
+	CALL [EAX+8] (453480)
+		TEST ECX,ECX (which is A58380)
+		JNZ 453487 (taken; otherwise, EAX = 0 and return)
+		EDX = [ECX+C] (1)
+		PUSH ESI
+		EDX-- (0)
+		ESI = EDX
+		[ECX+C] = EDX (0)
+		TEST ESI,ESI
+		JNZ 45349B (not taken)
+		EAX = [ECX] (470B00)
+		PUSH 1
+		CALL [EAX] (454950)
+			PUSH ESI
+			ESI = ECX
+			CALL 454970
+				PUSH -1
+				PUSH 465BE8 (SEH)
+				EAX = FS:[0] (12FD5C)
+				PUSH EAX
+				FS:[0] = ESP (12FC18)
+				PUSH ECX (A58380)
+				PUSH ESI (A58380)
+				ESI = ECX
+				[ESP+4] = ESI
+				[ESI] = 470B00 ("PIE")
+				EAX = [ESI+14] (A583A0)
+				[ESP+10] = 0
+				PUSH EAX
+				CALL 455EC0
+					EAX = [ESP+4]
+					PUSH EAX
+					CALL 457A00
+						PUSH ECX, ESI
+						ESI = [ESP+C] (A583A0)
+						TEST ESI,ESI
+						JE 457A47 (not taken)
+						EAX = ESP+C (12FC04)
+						ECX = ESP+4 (12FBFC)
+						PUSH EAX, ECX, ESI
+						CALL 45BDD0
+							ECX = [ESP+4] (A583A0)
+							EAX = 478BD8
+							CMP ECX, [EAX+10] (EAX+10 points to A50000)
+							JBE 45BDE3 (not taken)
+							CMP ECX, [EAX+14] (points to E50000)
+							JB 45BDEE (taken; alternative is: EAX=[EAX], "CMP EAX,478BD8", JE 45BE26, JMP 45BDD9)
+							TEST CL,0F (CL is A0)
+							JNZ 45BE26 (not taken)
+							EDX = ECX (A583A0)
+							EDX &= 0FFF (3A0)
+							CMP EDX,100
+							JB 45BE26 (not taken)
+							EDX = [ESP+8] (12FBFC)
+							[EDX] = EAX (478BD8)
+							EDX = [ESP+C] (12FC04)
+							EAX = ECX
+							EAX &= FFFFF000 (A58000)
+							ECX -= EAX (3A0)
+							[EDX] = EAX
+							ECX -= 100
+							ECX >>= 4 (2A)
+							EAX = ECX+EAX+8 (A58032, which has a val of 3)
+							Return
+						ESP += C
+						TEST EAX,EAX
+						JE 457A37 (not taken)
+						EDX = [ESP+C] (A58000)
+						PUSH EAX
+						EAX = [ESP+8] (478BD8)
+						PUSH EDX, EAX
+						CALL 45BE30
+							EAX = [ESP+4] (478BD8)
+							ECX = [ESP+8] (A58000)
+							PUSH ESI
+							EDX = 0
+							ECX -= [EAX+10] (8000)
+							ECX >>= C (8)
+							ESI = [EAX+ECX*8+18] (CB, from [478C30])
+							EAX = 478C30
+							ECX = [ESP+10] (A58032)
+							DL = BYTE [ECX] (3)
+							ESI += EDX (CE)
+							[EAX] = ESI
+							BYTE [ECX] = 0
+							ECX = [EAX]
+							[EAX+4] = 0F1
+							CMP ECX,0F0
+							JNZ 45BE81 (jump is taken, @45BE65)
+							<The path not taken:
+							EAX++
+							CMP EAX,20
+							JNZ 45BE81
+							PUSH 10
+							CALL 45BD00
+							ESP += 4
+							>
+							POP ESI
+							Return to 457A31
+						ESP += C
+						POP ESI, ECX
+						Return to 455ECA
+					ESP += 4
+					Return to 4549A4
+				ECX = [ESI+1C] (0)
+				ESP += 4
+				PUSH ECX
+				CALL 455EC0 (again)
+					(I don't know what it accomplished the first time, but I don't feel like going through it again)
+				ESP += 4 (EAX is 0, ECX is 0, EDX is 3, EBX is A583D0, ESP is 12FC0C, EBP is FFFFFFFF, ESI is A58380, EDI is 12FC66)
+				ECX = ESI
+				[ESP+10] = -1
+				CALL 455910
+					[ECX] = 470B60
+					ECX = [ECX+8] (A507E0, which is not far before "D:\DATA\disk1.CFS" again)
+					TEST ECX,ECX
+					JE 455922 (not taken)
+					JMP 455B40
+					EDX = [ECX+C] (2)
+					PUSH ESI
+					EDX--
+					ESI = EDX
+					[ECX+C] = EDX
+					TEST ESI,ESI
+					JNZ 455B58 (jump is taken)
+					<The path not travelled:
+					TEST ECX,ECX
+					JE 455B58
+					PUSH 1
+					CALL [EAX]
+					>
+					EAX = ESI
+					POP ESI
+					Return to 4549C2
+				ECX = [ESP+8] (12FD5C, next SEH)
+				POP ESI (A583D0)
+				FS:[0] = ECX
+				ESP += 10
+				Return
+			TEST BYTE [ESP+8],1 ([ESP+8] is 1)
+			JE 454968 (not taken)
+			PUSH ESI
+			CALL 455EC0 (a third time; not following)
+			ESP += 4
+			@454968: EAX = ESI
+			POP ESI
+			Return 4
+		EAX = ESI
+		POP ESI
+		Return
+	EAX = EBX (A583D0)
+	JMP 4247F2 (skips "EAX=0" only)
+	ECX = [ESP+120] (12FF2C)
+	POP EDI, ESI, EBP
+	FS:[0] = ECX
+	POP EBX
+	ESP += 11C (first on stack is 4246B0, next is pointer to "copyright")
+	Return to 424C0D
+(After this point, it must say to load copyright.pal)
+
+
+
+
+From the switch for file format, I noticed:
+Format	[ESP+128]
+0	34
+1	34
+2	18
+3	3C
+4	3C
+5	20
+And then they each have a different, but short, subfunction. Maybe it assigns a function pointer to a structure, which the default case calls.

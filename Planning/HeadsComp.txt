@@ -1,0 +1,53 @@
+Headscomp.spr, type 3, 8x8, 6 images, weirdList is 64 64 65 68 74 64 65 68 84 64 65 68 94 64 65 68 A4 64 65 68 B4 64 65 68
+Ordered list is 7E 01 00 00 00 00 00 00 07 00 00 00 10 00 00 00 19 00 00 00 22 00 00 00 2B 00 00 00 32 00 00 00 3B 00 00 00 44 00 00 00 4C 00 00 00 54 00 00 00 5C 00 00 00 64 00 00 00 6C 00 00 00 74 00 00 00 7B 00 00 00 81 00 00 00 88 00 00 00 90 00 00 00 98 00 00 00 A0 00 00 00 A8 00 00 00 B0 00 00 00 B8 00 00 00 C1 00 00 00 C8 00 00 00 D0 00 00 00 D9 00 00 00 E2 00 00 00 EA 00 00 00 F3 00 00 00 FB 00 00 00 03 01 00 00 08 01 00 00 0F 01 00 00 16 01 00 00 1D 01 00 00 24 01 00 00 2B 01 00 00 31 01 00 00 36 01 00 00 3F 01 00 00 48 01 00 00 51 01 00 00 5A 01 00 00 63 01 00 00 6C 01 00 00 75 01 00 00
+
+{00} <02 44> C5 C4 C5 CC <02 01 <--Output byte 0x07 is the second byte (second row) of the second ZeroSeries
+	00 00 C5 C4 C5 CC 00 00
+	00
+{00} 46> C9 C4 CC C4 C5 BF <01	<--Output byte 0x10 is the second byte (third row) (within the Ref) of the third ZeroSeries
+	   C9 C4 CC C4 C5 BF 00
+{41} [08 00]> CB CB C4 C5 C9 [08 20] C4	ZeroSeries seems to end with Ref, so 3F to next? Also take away one byte from the ref that terminates it. 0x19 points at the last 00 output here.
+	00 C9 C4 CB CB C4 C5 C9
+	00 00 C9 C4 CB C4
+{08} C4 C5 87 [11 00] C4 C9 C9 86 <--0x22 is the middle ?? output here.
+	                  C4 C5
+	87 ?? ?? ?? C4 C9 C9 86
+{00} C9 87 <01 02 44> C4 CB C5	ZeroSeries is guessed (0x19 since the ZeroSeries). But why would 01 and 02 be separate when this doesn't seem to be at the end of a row, and why isn't it 3F from the Ref-terminated ZeroSeries? 2B points to the second 00 output by the ZeroSeries.
+	C9 87 00
+	00 00 C4 CB C5?
+{02} C4 [2A 00] DA C5 C4 84 C5 F0	Still don't know how Refs with a left byte > 0xF work. 0x32 points to the third ?? output here.
+	C4 ?? ?? ?? DA C5 C4 84
+	C5 F0
+{00} <01 48> ED D9 C4 C5 C5 C5	<--0x31 points to the 00 here.
+	      00 ED D9 C4 C5 C5 C5 (should be end of first image, or this 00 might be the end if that 01 02 44 really is a ZeroSeries terminating a row)
+{40} DA EF <01 45> 00 00 [01 00] 02	ZeroSeries is guessed
+{86} 46 [06 20] [07 20] A5 A5 E5 BF [0F 10]
+{02} 88 [4B 00] 02 46 C4 A5 C4 8D
+{00} 8A CF 02 46 C5 F0 CB C4
+{08} 88 C4 02 [73 10] 84 C5 02 02 
+{62} 43 [3D 00] 03 02 44 [3B 20] [43 50] 01
+{40} 45 EC C4 93 88 EB [0F 00] EB
+{83} [87 00] [07 10] C4 88 C5 F9 88 [1F 00]
+{15} [96 00] CB [07 10] 86 [10 00] C5 02 47
+{01} [59 00] 85 C5 00 00 01 01 44
+{00} C6 C2 C6 C6 03 46 82 C3 
+{00} C3 FD C6 C2 02 41 C3 C1
+{04} 44 C4 [09 00] 02 44 FD CB CB 
+{10} 83 C1 41 84 [59 00] 88 86 8A
+{04} 86 C6 [E2 00] C4 CB CB 86 C7
+{00} C2 01 02 46 84 C4 82 82 
+{24} C8 FD [97 00] 85 87 [3C 00] 05 42 
+{00} FA FA 01 03 44 A5 BF FE 
+{42} FA [E3 00] BF BF A5 A5 [A1 10] 8B
+{42} 8A [06 10] C9 8D BF 87 [AF 00] 84
+{00} 8A C5 C7 02 03 43 C3 8A 
+{00} 8D 02 03 42 C7 87 03 01 
+{00} 46 93 CB CB CB CB 88 01 
+{06} 47 [53 00] [55 00] 93 01 48 CE CB 
+{00} 93 C4 C5 88 CB 88 48 CB 
+{00} 00 00 C4 00 00 CB D2 48 
+{00} CB 7F FF 00 FF 00 CB 86 
+{04} 48 7D [25 01] C4 88 CB 93 01 
+{00} 47 C4 CB 84 88 92 C4 93 
+{00} 02 44 CB 86 93 C5 01 41 
+{00} CB

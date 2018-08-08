@@ -1,0 +1,20 @@
+Game wouldn't run on Windows 7
+Made Windows XP VM, wouldn't run game
+Made Windows 98 VM
+	Tried using OllyDbg
+	Put lots of breakpoints on lots of things, until I got used to it
+	Eventually realized game took control of screen and mouse so I couldn't use a debugger well
+	Couldn't find API calls for a while because DirectDraw uses an interface (Codewalker saved me)
+	Couldn't use a memory breakpoint like Codewalker suggested
+	Eventually edited game code in 6+ locations (CreateWindow, ChangeDisplaySettings, SetCapture, DirectDraw APIs, and window event handler) after multiple attempts, couldn't wrest control from game's grasp
+	Thought about remote debug, but no options work for 98
+Made Windows XP VM
+	Game still took screen control, so I tried remote debugging (spent several hours)
+	Tried using virtual COM to connect
+	Tried using TCP to connect
+	WinDbg would only connect in Kernel mode, which is ugly, via named pipe
+	Edited Windows XP in two ways to enable Remote Desktop connections (took half an hour or so)
+	Connected through Remote Desktop and was able to use OllyDbg on half the screen
+	Read over 500 lines of assembly (took a few hours) before I found the decompression procedure
+	Accidentally skipped the entire second pass of the decompression, it seems
+And throughout the whole process, I stopped numerous times to see if I could figure out more of the decompression mechanics just by thinking and looking at the raw data
